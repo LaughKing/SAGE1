@@ -1,5 +1,6 @@
 """
-测试 sage.apps.libs.rag.evaluate 模块
+import logging
+测试 sage.libs.rag.evaluate 模块
 """
 
 import pytest
@@ -388,7 +389,7 @@ class TestEvaluateFallback:
                 self.name = name
             
             def execute(self, data):
-                print(f"[{self.name}] : 0.8500")
+                logging.info(f"[{self.name}] : 0.8500")
                 return data
         
         evaluator = MockEvaluator("MockF1")

@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """
+from sage.common.utils.logging.custom_logger import CustomLogger
 SAGE Configuration Manager
 统一的配置文件管理
 """
@@ -199,11 +200,11 @@ def show(
     config_manager = get_config_manager(config_path)
     try:
         config = config_manager.load_config()
-        print("当前配置:")
+        self.logger.info("当前配置:")
         import pprint
         pprint.pprint(config)
     except FileNotFoundError:
-        print("配置文件不存在，请先创建配置")
+        self.logger.info("配置文件不存在，请先创建配置")
 
 @app.command()
 def create(
@@ -212,7 +213,7 @@ def create(
     """创建默认配置"""
     config_manager = get_config_manager(config_path)
     config_manager.create_default_config()
-    print(f"默认配置已创建: {config_manager.config_path}")
+    self.logger.info(f"默认配置已创建: {config_manager.config_path}")
 
 @app.command()
 def set(
@@ -233,9 +234,9 @@ def set(
             current = current[k]
         current[keys[-1]] = value
         config_manager.save_config(config)
-        print(f"配置已更新: {key} = {value}")
+        self.logger.info(f"配置已更新: {key} = {value}")
     except FileNotFoundError:
-        print("配置文件不存在，请先创建配置")
+        self.logger.info("配置文件不存在，请先创建配置")
 
 if __name__ == "__main__":
     app()

@@ -1,4 +1,5 @@
 """
+from sage.common.utils.logging.custom_logger import CustomLogger
 Dependency Summary Tool - Integrated from scripts/dependency_summary.py
 
 This tool analyzes and reports on project dependencies across all packages.
@@ -235,8 +236,8 @@ class DependencyAnalyzer:
                         }
             
         except Exception as e:
-            print(f"Warning: Could not parse {pyproject_file}: {e}")
-    
+            self.logger.info(f"Warning: Could not parse {pyproject_file}: {e}")
+
     def _parse_setup_dependencies(self, setup_file: Path, analysis: Dict):
         """Parse dependencies from setup.py (basic parsing)."""
         try:
@@ -260,9 +261,11 @@ class DependencyAnalyzer:
                         analysis['dependencies'][dep_name] = dep_info
                         
         except Exception as e:
-            print(f"Warning: Could not parse {setup_file}: {e}")
-    
-    def _parse_requirements_dependencies(self, req_file: Path, analysis: Dict, is_dev: bool = False):
+            self.logger.info(f"Warning: Could not parse {setup_file}: {e}")
+
+    def _parse_requirements_dependencies(
+        self, req_file: Path, analysis: Dict, is_dev: bool = False
+    ):
         """Parse dependencies from requirements.txt files."""
         try:
             source_name = req_file.name
@@ -277,8 +280,8 @@ class DependencyAnalyzer:
                         target_dict[dep_name] = dep_info
                         
         except Exception as e:
-            print(f"Warning: Could not parse {req_file}: {e}")
-    
+            self.logger.info(f"Warning: Could not parse {req_file}: {e}")
+
     def _parse_dependency_spec(self, dep_spec: str) -> tuple:
         """Parse a dependency specification."""
         import re

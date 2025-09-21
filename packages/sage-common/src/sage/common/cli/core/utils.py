@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """
+from sage.common.utils.logging.custom_logger import CustomLogger
 SAGE CLI Utilities
 ==================
 
@@ -416,12 +417,12 @@ def setup_signal_handlers(cleanup_func=None):
         cleanup_func: 清理函数，在收到终止信号时调用
     """
     def signal_handler(signum, frame):
-        print(f"\nReceived signal {signum}, cleaning up...")
+        self.logger.info(f"\nReceived signal {signum}, cleaning up...")
         if cleanup_func:
             try:
                 cleanup_func()
             except Exception as e:
-                print(f"Error during cleanup: {e}")
+                self.logger.info(f"Error during cleanup: {e}")
         sys.exit(0)
     
     signal.signal(signal.SIGINT, signal_handler)

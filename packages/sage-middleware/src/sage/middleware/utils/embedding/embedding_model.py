@@ -1,3 +1,4 @@
+from sage.common.utils.logging.custom_logger import CustomLogger
 import os
 import sys
 os.environ["HF_ENDPOINT"] = "https://hf-mirror.com"
@@ -142,9 +143,10 @@ def main():
     for i in range(10):
         start = time.time()
         v = embedding_model.embed(f"{i} times ")
-        print(v)
+        self.logger.info(v)
         end = time.time()
-        print(f"embedding time :{end-start}")
-        
-if __name__ =="__main__":
+        self.logger.info(f"embedding time :{end-start}")
+
+
+if __name__ == "__main__":
     main()

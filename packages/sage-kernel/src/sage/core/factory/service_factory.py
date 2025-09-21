@@ -1,4 +1,8 @@
-from typing import Type, Any, Tuple, TYPE_CHECKING
+from sage.common.utils.logging.custom_logger import CustomLogger
+from typing import TYPE_CHECKING, Any, Tuple, Type
+
+from sage.kernel.runtime.context.context_injection import \
+    create_service_with_context
 
 if TYPE_CHECKING:
     from sage.kernel import ServiceContext
@@ -30,7 +34,9 @@ class ServiceFactory:
             
         self.service_name = service_name or service_class.__name__
         self.service_class = service_class
-        print(f"ServiceFactory initialized for {self.service_name} with class {self.service_class}")
+        self.logger.info(
+            f"ServiceFactory initialized for {self.service_name} with class {self.service_class}"
+        )
         self.service_args = service_args
         self.service_kwargs = service_kwargs or {}
     

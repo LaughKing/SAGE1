@@ -1,4 +1,5 @@
 """
+from sage.common.utils.logging.custom_logger import CustomLogger
 KV Service API 使用示例
 展示如何正确使用KV微服务的API接口
 """
@@ -10,9 +11,9 @@ from sage.middleware.api.kv_api import KVServiceAPI
 
 def test_kv_service_api():
     """测试KV服务API的正确使用方式"""
-    print("🚀 KV Service API Demo")
-    print("=" * 50)
-    
+    self.logger.info("🚀 KV Service API Demo")
+    self.logger.info("=" * 50)
+
     # 创建环境
     env = LocalEnvironment("kv_service_demo")
     
@@ -24,9 +25,9 @@ def test_kv_service_api():
         ttl_seconds=300  # 5分钟过期
     )
     env.register_service_factory("demo_kv_service", kv_factory)
-    
-    print("✅ KV Service registered with memory backend")
-    
+
+    self.logger.info("✅ KV Service registered with memory backend")
+
     # 在实际应用中，你需要启动环境并获取服务代理
     # env.submit()  # 启动环境
     # kv_service = env.get_service_proxy("demo_kv_service")
@@ -37,22 +38,22 @@ def test_kv_service_api():
 
 def demonstrate_kv_api_usage():
     """演示KV服务API的标准使用模式"""
-    print("\n📝 KV Service API Usage Patterns:")
-    print("-" * 40)
-    
+    self.logger.info("\n📝 KV Service API Usage Patterns:")
+    self.logger.info("-" * 40)
+
     # 展示API接口
-    print("💡 KV Service API Interface:")
-    print("   class KVServiceAPI:")
-    print("     - put(key: str, value: Any) -> bool")
-    print("     - get(key: str) -> Optional[Any]")
-    print("     - delete(key: str) -> bool")
-    print("     - exists(key: str) -> bool")
-    print("     - list_keys(prefix: Optional[str] = None) -> List[str]")
-    print("     - size() -> int")
-    print("     - clear() -> bool")
-    
-    print("\n📋 Standard Usage Example:")
-    usage_code = '''
+    self.logger.info("💡 KV Service API Interface:")
+    self.logger.info("   class KVServiceAPI:")
+    self.logger.info("     - put(key: str, value: Any) -> bool")
+    self.logger.info("     - get(key: str) -> Optional[Any]")
+    self.logger.info("     - delete(key: str) -> bool")
+    self.logger.info("     - exists(key: str) -> bool")
+    self.logger.info("     - list_keys(prefix: Optional[str] = None) -> List[str]")
+    self.logger.info("     - size() -> int")
+    self.logger.info("     - clear() -> bool")
+
+    self.logger.info("\n📋 Standard Usage Example:")
+    usage_code = """
 # 1. 获取服务代理
 kv_service = env.get_service_proxy("demo_kv_service")
 
@@ -89,14 +90,14 @@ cleanup_success = kv_service.delete("session:abc")
 try:
     result = kv_service.get("non_existent_key")
     if result is None:
-        print("Key not found")
+        self.logger.info("Key not found")
 except Exception as e:
-    print(f"Error accessing KV service: {e}")
-'''
-    print(usage_code)
-    
+    self.logger.info(f"Error accessing KV service: {e}")
+"""
+    self.logger.info(usage_code)
+
     # 模拟执行结果
-    print("🎯 Expected Results:")
+    self.logger.info("🎯 Expected Results:")
     operations = [
         ("put('user:123', user_data)", "True"),
         ("get('user:123')", "{'name': 'Alice', 'age': 30, 'email': '...'}"),
@@ -108,15 +109,15 @@ except Exception as e:
     ]
     
     for operation, result in operations:
-        print(f"   {operation:<30} -> {result}")
+        self.logger.info(f"   {operation:<30} -> {result}")
 
 
 def test_kv_advanced_patterns():
     """演示KV服务的高级使用模式"""
-    print("\n🔧 Advanced KV Usage Patterns:")
-    print("-" * 40)
-    
-    advanced_patterns = '''
+    self.logger.info("\n🔧 Advanced KV Usage Patterns:")
+    self.logger.info("-" * 40)
+
+    advanced_patterns = """
 # 1. 缓存模式
 class UserCache:
     def __init__(self, kv_service: KVServiceAPI):
@@ -169,15 +170,15 @@ class ConfigManager:
     
     def list_all_configs(self):
         return self.kv.list_keys(self.config_prefix)
-'''
-    print(advanced_patterns)
+"""
+    self.logger.info(advanced_patterns)
 
 
 def test_kv_with_redis():
     """演示KV服务的Redis后端配置"""
-    print("\n🔧 Redis Backend Configuration:")
-    
-    redis_config_example = '''
+    self.logger.info("\n🔧 Redis Backend Configuration:")
+
+    redis_config_example = """
 # Redis后端配置示例
 redis_kv_factory = create_kv_service_factory(
     service_name="redis_kv_service",
@@ -195,19 +196,19 @@ env.register_service_factory("redis_kv", redis_kv_factory)
 # API调用方式不变
 redis_kv = env.get_service_proxy("redis_kv")
 redis_kv.put("persistent_key", {"data": "stored_in_redis"})
-'''
-    
-    print(redis_config_example)
-    print("✅ Redis KV factory configuration shown")
-    print("   - 连接: redis://localhost:6379")
-    print("   - TTL: 1小时")
-    print("   - 持久化存储")
-    print("   - 相同的API接口")
+"""
+
+    self.logger.info(redis_config_example)
+    self.logger.info("✅ Redis KV factory configuration shown")
+    self.logger.info("   - 连接: redis://localhost:6379")
+    self.logger.info("   - TTL: 1小时")
+    self.logger.info("   - 持久化存储")
+    self.logger.info("   - 相同的API接口")
 
 
 if __name__ == "__main__":
     test_kv_service_api()
     test_kv_advanced_patterns()
     test_kv_with_redis()
-    print("\n🎯 KV Service API demo completed!")
-    print("\n📚 Next: Check VDB and Memory service API examples")
+    self.logger.info("\n🎯 KV Service API demo completed!")
+    self.logger.info("\n📚 Next: Check VDB and Memory service API examples")

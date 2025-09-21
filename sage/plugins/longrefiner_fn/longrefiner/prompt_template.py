@@ -1,4 +1,6 @@
-from transformers import AutoTokenizer, AutoConfig
+from sage.common.utils.logging.custom_logger import CustomLogger
+import warnings
+
 import tiktoken
 import warnings
 
@@ -35,7 +37,7 @@ class PromptTemplate:
             flag = False
             for prompt in [self.system_prompt, self.user_prompt]:
                 if f"{holder}" in prompt:
-                    print(f"Find `{holder}` in template")
+                    self.logger.info(f"Find `{holder}` in template")
                     flag = True
                     break
             if not flag and holder != "reference":
@@ -54,7 +56,7 @@ class PromptTemplate:
                     truncated_messages.append(message)
                     total_tokens += len(encoded_message)
                 else:
-                    print(
+                    self.logger.info(
                         f"The input text length is greater than the maximum length ({total_tokens + len(encoded_message)} > {self.max_input_len}) and has been truncated!"
                     )
                     remaining_tokens = self.max_input_len - total_tokens
@@ -70,7 +72,7 @@ class PromptTemplate:
             tokenized_prompt = self.tokenizer(prompt, truncation=False, return_tensors="pt").input_ids[0]
 
             if len(tokenized_prompt) > self.max_input_len:
-                print(
+                self.logger.info(
                     f"The input text length is greater than the maximum length ({len(tokenized_prompt)} > {self.max_input_len}) and has been truncated!"
                 )
                 half = int(self.max_input_len / 2)

@@ -1,3 +1,8 @@
+import logging
+import threading
+import time
+from typing import Any, Dict, List
+
 import pytest
 import time
 import threading
@@ -111,8 +116,10 @@ class ConnectedDebugSink(SinkFunction):
         )
 
         # 打印调试信息
-        print(f"🔍 [Instance {self.parallel_index}] Type: {data_type}, "
-              f"Key: {key_info}, Data: {data}")
+        logging.info(
+            f"🔍 [Instance {self.parallel_index}] Type: {data_type}, "
+            f"Key: {key_info}, Data: {data}"
+        )
 
         return data
     
@@ -175,8 +182,8 @@ class TestConnectedStreamsKeyBy:
     
     def test_unified_keyby(self):
         """测试统一的KeyBy - 两个流使用相同的key selector"""
-        print("\n🚀 Testing Connected Streams Unified KeyBy")
-        
+        logging.info("\n🚀 Testing Connected Streams Unified KeyBy")
+
         env = LocalEnvironment("connected_unified_keyby_test")
         
         # 创建两个数据源
@@ -191,10 +198,14 @@ class TestConnectedStreamsKeyBy:
             .map(lambda x: x)  # 透明传递
             .sink(ConnectedDebugSink, parallelism=2)
         )
-        
-        print("📊 Pipeline: UserStream + EventStream -> ConnectedStreams.keyby(UserIdExtractor) -> Sink(parallelism=2)")
-        print("🎯 Expected: Data with same user_id should go to same parallel instance\n")
-        
+
+        logging.info(
+            "📊 Pipeline: UserStream + EventStream -> ConnectedStreams.keyby(UserIdExtractor) -> Sink(parallelism=2)"
+        )
+        logging.info(
+            "🎯 Expected: Data with same user_id should go to same parallel instance\n"
+        )
+
         try:
             env.submit()
             
@@ -206,8 +217,8 @@ class TestConnectedStreamsKeyBy:
     
     def test_per_stream_keyby(self):
         """测试Flink风格的per-stream KeyBy - 每个流使用不同的key selector"""
-        print("\n🚀 Testing Connected Streams Per-Stream KeyBy (Flink-style)")
-        
+        logging.info("\n🚀 Testing Connected Streams Per-Stream KeyBy (Flink-style)")
+
         env = LocalEnvironment("connected_per_stream_keyby_test")
         
         user_stream = env.from_source(UserDataSource, delay=0.3)
@@ -221,10 +232,12 @@ class TestConnectedStreamsKeyBy:
             .map(lambda x: x)  # 透明传递
             .sink(ConnectedDebugSink, parallelism=3)
         )
-        
-        print("📊 Pipeline: UserStream + EventStream -> ConnectedStreams.keyby([UserIdExtractor, SessionIdExtractor]) -> Sink(parallelism=3)")
-        print("🎯 Expected: Stream 0 by user_id, Stream 1 by session_id\n")
-        
+
+        logging.info(
+            "📊 Pipeline: UserStream + EventStream -> ConnectedStreams.keyby([UserIdExtractor, SessionIdExtractor]) -> Sink(parallelism=3)"
+        )
+        logging.info("🎯 Expected: Stream 0 by user_id, Stream 1 by session_id\n")
+
         try:
             env.submit()
             
@@ -236,8 +249,8 @@ class TestConnectedStreamsKeyBy:
     
     def test_keyby_with_comap(self):
         """测试KeyBy后接CoMap操作"""
-        print("\n🚀 Testing Connected Streams KeyBy + CoMap")
-        
+        logging.info("\n🚀 Testing Connected Streams KeyBy + CoMap")
+
         env = LocalEnvironment("connected_keyby_comap_test")
         
         user_stream = env.from_source(UserDataSource, delay=0.3)
@@ -251,10 +264,12 @@ class TestConnectedStreamsKeyBy:
             .comap(JoinCoMapFunction)   # 进行数据join
             .sink(ConnectedDebugSink, parallelism=2)
         )
-        
-        print("📊 Pipeline: UserStream + EventStream -> keyby(UserIdExtractor) -> comap(JoinCoMapFunction) -> Sink")
-        print("🎯 Expected: Same user_id data co-located for join operation\n")
-        
+
+        logging.info(
+            "📊 Pipeline: UserStream + EventStream -> keyby(UserIdExtractor) -> comap(JoinCoMapFunction) -> Sink"
+        )
+        logging.info("🎯 Expected: Same user_id data co-located for join operation\n")
+
         try:
             env.submit()
             
@@ -266,8 +281,8 @@ class TestConnectedStreamsKeyBy:
     
     def test_invalid_keyby_configurations(self):
         """测试无效的KeyBy配置"""
-        print("\n🚀 Testing Invalid KeyBy Configurations")
-        
+        logging.info("\n🚀 Testing Invalid KeyBy Configurations")
+
         env = LocalEnvironment("invalid_keyby_test")
         
         user_stream = env.from_source(UserDataSource, delay=0.5)
@@ -281,23 +296,23 @@ class TestConnectedStreamsKeyBy:
         # 测试2：Lambda函数不支持
         with pytest.raises(NotImplementedError, match="Lambda functions are not supported"):
             connected.keyby(lambda x: x["user_id"])
-        
-        print("✅ Invalid configuration tests passed")
-        
+
+        logging.info("✅ Invalid configuration tests passed")
+
         env.close()
     
     def _verify_unified_keyby_partitioning(self):
         """验证统一KeyBy的分区效果"""
         received_data = ConnectedDebugSink.get_received_data()
-        
-        print("\n📋 Unified KeyBy Partitioning Results:")
-        print("=" * 60)
-        
+
+        logging.info("\n📋 Unified KeyBy Partitioning Results:")
+        logging.info("=" * 60)
+
         user_distribution = {}
         
         for instance_id, data_list in received_data.items():
-            print(f"\n🔹 Parallel Instance {instance_id}:")
-            
+            logging.info(f"\n🔹 Parallel Instance {instance_id}:")
+
             for data in data_list:
                 user_id = data["user_id"]
                 data_type = data["type"]
@@ -305,35 +320,39 @@ class TestConnectedStreamsKeyBy:
                 if user_id not in user_distribution:
                     user_distribution[user_id] = set()
                 user_distribution[user_id].add(instance_id)
-                
-                print(f"   - User {user_id} ({data_type}): {data.get('name', data.get('event', 'N/A'))}")
-        
-        print(f"\n🎯 User Distribution Across Instances:")
+
+                logging.info(
+                    f"   - User {user_id} ({data_type}): {data.get('name', data.get('event', 'N/A'))}"
+                )
+
+        logging.info(f"\n🎯 User Distribution Across Instances:")
         for user_id, instances in user_distribution.items():
-            print(f"   - {user_id}: routed to instance(s) {instances}")
-        
+            logging.info(f"   - {user_id}: routed to instance(s) {instances}")
+
         # 验证：每个用户的所有数据（无论来自哪个流）都应该路由到同一个实例
         for user_id, instances in user_distribution.items():
             assert len(instances) == 1, (
                 f"❌ User {user_id} data was routed to multiple instances: {instances}. "
                 f"Unified keyby should send same key to same instance."
             )
-        
-        print("✅ Unified keyby test passed: Each user's data from both streams routed to same instance")
-    
+
+        logging.info(
+            "✅ Unified keyby test passed: Each user's data from both streams routed to same instance"
+        )
+
     def _verify_per_stream_keyby_partitioning(self):
         """验证per-stream KeyBy的分区效果"""
         received_data = ConnectedDebugSink.get_received_data()
-        
-        print("\n📋 Per-Stream KeyBy Partitioning Results:")
-        print("=" * 60)
-        
+
+        logging.info("\n📋 Per-Stream KeyBy Partitioning Results:")
+        logging.info("=" * 60)
+
         stream0_key_distribution = {}  # user_id distribution
         stream1_key_distribution = {}  # session_id distribution
         
         for instance_id, data_list in received_data.items():
-            print(f"\n🔹 Parallel Instance {instance_id}:")
-            
+            logging.info(f"\n🔹 Parallel Instance {instance_id}:")
+
             for data in data_list:
                 data_type = data["type"]
                 
@@ -343,46 +362,50 @@ class TestConnectedStreamsKeyBy:
                     if key not in stream0_key_distribution:
                         stream0_key_distribution[key] = set()
                     stream0_key_distribution[key].add(instance_id)
-                    print(f"   - Stream0 key '{key}': {data['name']}")
-                    
+                    logging.info(f"   - Stream0 key '{key}': {data['name']}")
+
                 elif data_type == "event":
                     # Stream 1: 按session_id分区
                     key = data.get("session_id", "unknown")
                     if key not in stream1_key_distribution:
                         stream1_key_distribution[key] = set()
                     stream1_key_distribution[key].add(instance_id)
-                    print(f"   - Stream1 key '{key}': {data['event']}")
-        
-        print(f"\n🎯 Stream 0 (User) Key Distribution:")
+                    logging.info(f"   - Stream1 key '{key}': {data['event']}")
+
+        logging.info(f"\n🎯 Stream 0 (User) Key Distribution:")
         for key, instances in stream0_key_distribution.items():
-            print(f"   - User {key}: routed to instance(s) {instances}")
-        
-        print(f"\n🎯 Stream 1 (Event) Key Distribution:")
+            logging.info(f"   - User {key}: routed to instance(s) {instances}")
+
+        logging.info(f"\n🎯 Stream 1 (Event) Key Distribution:")
         for key, instances in stream1_key_distribution.items():
-            print(f"   - Session {key}: routed to instance(s) {instances}")
-        
+            logging.info(f"   - Session {key}: routed to instance(s) {instances}")
+
         # 验证：每个流的相同key应该路由到相同实例
         for key, instances in stream0_key_distribution.items():
             assert len(instances) == 1, f"❌ Stream0 key {key} routed to multiple instances: {instances}"
         
         for key, instances in stream1_key_distribution.items():
-            assert len(instances) == 1, f"❌ Stream1 key {key} routed to multiple instances: {instances}"
-        
-        print("✅ Per-stream keyby test passed: Each stream's keys correctly partitioned")
-    
+            assert (
+                len(instances) == 1
+            ), f"❌ Stream1 key {key} routed to multiple instances: {instances}"
+
+        logging.info(
+            "✅ Per-stream keyby test passed: Each stream's keys correctly partitioned"
+        )
+
     def _verify_keyby_comap_results(self):
         """验证KeyBy + CoMap的结果"""
         received_data = ConnectedDebugSink.get_received_data()
-        
-        print("\n📋 KeyBy + CoMap Results:")
-        print("=" * 60)
-        
+
+        logging.info("\n📋 KeyBy + CoMap Results:")
+        logging.info("=" * 60)
+
         user_updates = []
         enriched_events = []
         
         for instance_id, data_list in received_data.items():
-            print(f"\n🔹 Parallel Instance {instance_id}:")
-            
+            logging.info(f"\n🔹 Parallel Instance {instance_id}:")
+
             for data in data_list:
                 result_type = data.get("type", "unknown")
                 user_id = data.get("user_id", "unknown")
@@ -390,21 +413,25 @@ class TestConnectedStreamsKeyBy:
                 
                 if result_type == "user_update":
                     user_updates.append(data)
-                    print(f"   - User Update: {user_id} from stream {source_stream}")
+                    logging.info(f"   - User Update: {user_id} from stream {source_stream}")
                 elif result_type == "enriched_event":
                     enriched_events.append(data)
                     event_name = data.get("event_info", {}).get("event", "unknown")
-                    print(f"   - Enriched Event: {user_id} {event_name} from stream {source_stream}")
-        
-        print(f"\n🎯 CoMap Results Summary:")
-        print(f"   - User updates: {len(user_updates)}")
-        print(f"   - Enriched events: {len(enriched_events)}")
-        
+                    logging.info(
+                        f"   - Enriched Event: {user_id} {event_name} from stream {source_stream}"
+                    )
+
+        logging.info(f"\n🎯 CoMap Results Summary:")
+        logging.info(f"   - User updates: {len(user_updates)}")
+        logging.info(f"   - Enriched events: {len(enriched_events)}")
+
         # 验证：应该有用户更新和丰富的事件
         assert len(user_updates) > 0, "❌ No user updates received from CoMap"
         assert len(enriched_events) > 0, "❌ No enriched events received from CoMap"
-        
-        print("✅ KeyBy + CoMap test passed: Both user updates and enriched events received")
+
+        logging.info(
+            "✅ KeyBy + CoMap test passed: Both user updates and enriched events received"
+        )
 
 
 if __name__ == "__main__":

@@ -1,3 +1,4 @@
+from sage.common.utils.logging.custom_logger import CustomLogger
 import os
 import time
 from .base.base_tool import BaseTool
@@ -26,7 +27,7 @@ class ImageCaptioner(BaseTool):
             }
 
         )
-        print(f"ImageCaptioner initialized with model: {model_name}")
+        self.logger.info(f"ImageCaptioner initialized with model: {model_name}")
         self.set_model_name(model_name)
 
     def execute(self, image_path: str):
@@ -51,14 +52,14 @@ class ImageCaptioner(BaseTool):
                     response = client.generate(messages=messages)
                     return response
                 except ConnectionError as e:
-                    print(f"Connection error on attempt {attempt + 1}: {e}")
+                    self.logger.info(f"Connection error on attempt {attempt + 1}: {e}")
                     if attempt < max_retries - 1:
-                        print(f"Retrying in {retry_delay} seconds...")
+                        self.logger.info(f"Retrying in {retry_delay} seconds...")
                         time.sleep(retry_delay)
                     else:
                         raise
         except Exception as e:
-            print(f"Error in ImageCaptioner: {e}")
+            self.logger.info(f"Error in ImageCaptioner: {e}")
             return None
 
 if __name__ == "__main__":
@@ -74,7 +75,7 @@ if __name__ == "__main__":
 
     # Get tool metadata
     metadata = tool.get_metadata()
-    print(metadata)
+    self.logger.info(metadata)
 
     # Construct the full path to the image using the script's directory
     relative_image_path = "examples/baseball.png"
@@ -83,9 +84,9 @@ if __name__ == "__main__":
     # Execute the tool with default prompt
     try:
         execution = tool.execute(image_path=image_path)
-        print("Generated Caption:")
-        print(json.dumps(execution, indent=4)) 
-    except Exception as e: 
-        print(f"Execution failed: {e}")
+        self.logger.info("Generated Caption:")
+        self.logger.info(json.dumps(execution, indent=4))
+    except Exception as e:
+        self.logger.info(f"Execution failed: {e}")
 
-    print("Done!")
+    self.logger.info("Done!")

@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """
+from sage.common.utils.logging.custom_logger import CustomLogger
 SAGE CLI Refactoring Example
 ============================
 
@@ -90,7 +91,8 @@ class JobListCommand(JobManagerCommand):
             # 格式化输出
             if format_type == "json":
                 import json
-                print(json.dumps({"jobs": jobs}, indent=2))
+
+                self.logger.info(json.dumps({"jobs": jobs}, indent=2))
             else:
                 # 处理UUID显示长度
                 if not full_uuid:

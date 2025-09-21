@@ -1,3 +1,4 @@
+from sage.common.utils.logging.custom_logger import CustomLogger
 import json
 import re
 from typing import List, Tuple
@@ -200,7 +201,19 @@ class LongRefiner:
         budget: int = 2048,
         ratio: float = None,
     ) -> List[str]:
-        return self.batch_run([question], [document_list], budget, ratio)[0]
+        self.logger.info(
+            f"DEBUG: LongRefiner.run called with question='{question}', doc_count={len(document_list)}, budget={budget}"
+        )
+        batch_result = self.batch_run([question], [document_list], budget, ratio)
+        self.logger.info(
+            f"DEBUG: batch_run returned: {batch_result} (type: {type(batch_result)}, length: {len(batch_result) if batch_result else 'None'})"
+        )
+
+        if not batch_result:
+            self.logger.info("ERROR: batch_run returned empty list!")
+            return []
+
+        return batch_result[0]
 
     def batch_run(
         self,
@@ -219,25 +232,45 @@ class LongRefiner:
         Output:
             List[str], each string is a refiner output of the document in document_list
         """
-
-        # step1: query analysis
-        query_analysis_result = self.run_query_analysis(question_list)
-
-        # step2: doc structuring
-        doc_structuring_result = self.run_doc_structuring(document_list)
-
-        # step3: context selection (local + global)
-        # refined_content_list: List[str]: each string is the refined content of the question
-        refined_content_list = self.run_all_search(
-            question_list=question_list,
-            document_list=document_list,
-            query_analysis_result=query_analysis_result,
-            doc_structuring_result=doc_structuring_result,
-            budget=budget,
-            ratio=ratio,
+        self.logger.info(
+            f"DEBUG: batch_run called with {len(question_list)} questions, {len(document_list)} doc_lists"
         )
 
-        return refined_content_list
+        try:
+            # step1: query analysis
+            self.logger.info("DEBUG: Starting query analysis...")
+            query_analysis_result = self.run_query_analysis(question_list)
+            self.logger.info(
+                f"DEBUG: Query analysis completed: {len(query_analysis_result)} results"
+            )
+
+            # step2: doc structuring
+            self.logger.info("DEBUG: Starting doc structuring...")
+            doc_structuring_result = self.run_doc_structuring(document_list)
+            self.logger.info(
+                f"DEBUG: Doc structuring completed: {len(doc_structuring_result)} results"
+            )
+
+            # step3: context selection (local + global)
+            self.logger.info("DEBUG: Starting context selection...")
+            # refined_content_list: List[str]: each string is the refined content of the question
+            refined_content_list = self.run_all_search(
+                question_list=question_list,
+                document_list=document_list,
+                query_analysis_result=query_analysis_result,
+                doc_structuring_result=doc_structuring_result,
+                budget=budget,
+                ratio=ratio,
+            )
+            self.logger.info(f"DEBUG: Context selection completed: {refined_content_list}")
+
+            return refined_content_list
+        except Exception as e:
+            self.logger.info(f"ERROR in batch_run: {e}")
+            import traceback
+
+            traceback.print_exc()
+            return []
 
     def run_query_analysis(self, question_list: List[str]) -> List[dict]:
         """
@@ -638,7 +671,7 @@ class LongRefiner:
             List[str], each string is a refiner output of the document in document_list
         """
         # collect hierarchical nodes
-        # print(doc_structuring_result[0][0])
+        # self.logger.info(doc_structuring_result[0][0])
         # assert False
         all_nodes = self._collect_hierarchical_nodes(question_list, doc_structuring_result)
 
@@ -783,10 +816,13 @@ class LongRefiner:
         )
         for item_node_list in refined_node_list:
             for node in item_node_list:
-                print(node)
-                print("-----")
-                
-        final_contents_list = [[node["contents"] for node in item_node_list] for item_node_list in refined_node_list]
+                self.logger.info(node)
+                self.logger.info("-----")
+
+        final_contents_list = [
+            [node["contents"] for node in item_node_list]
+            for item_node_list in refined_node_list
+        ]
         return final_contents_list
 
     def select_by_budget(

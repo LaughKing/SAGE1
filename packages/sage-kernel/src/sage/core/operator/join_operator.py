@@ -1,3 +1,8 @@
+from sage.common.utils.logging.custom_logger import CustomLogger
+from typing import Any, List, Union
+
+from sage.core.communication.packet import Packet
+
 from .base_operator import BaseOperator
 from typing import Union, Any, List
 from sage.core.communication.packet import Packet
@@ -151,13 +156,13 @@ class JoinOperator(BaseOperator):
     def debug_print_statistics(self):
         """打印详细的统计信息"""
         stats = self.get_statistics()
-        print(f"\n📊 JoinOperator '{self.name}' Statistics:")
-        print(f"   Function: {stats['function_type']}")
-        print(f"   Processed packets: {stats['processed_packets']}")
-        print(f"   Emitted results: {stats['emitted_results']}")
-        print(f"   Join ratio: {stats['join_ratio']:.2%}")
-        print(f"   Validated: {stats['is_validated']}")
-    
+        self.logger.info(f"\n📊 JoinOperator '{self.name}' Statistics:")
+        self.logger.info(f"   Function: {stats['function_type']}")
+        self.logger.info(f"   Processed packets: {stats['processed_packets']}")
+        self.logger.info(f"   Emitted results: {stats['emitted_results']}")
+        self.logger.info(f"   Join ratio: {stats['join_ratio']:.2%}")
+        self.logger.info(f"   Validated: {stats['is_validated']}")
+
     def _validate_execute_method_signature(self) -> bool:
         """
         验证execute方法的签名是否正确

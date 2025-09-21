@@ -1,4 +1,8 @@
-from typing import Callable, Any, List, Tuple, Type, Optional, Hashable
+from sage.common.utils.logging.custom_logger import CustomLogger
+import inspect
+import logging
+from typing import Any, Callable, Hashable, List, Optional, Tuple, Type
+
 from sage.core.api.function.base_function import BaseFunction
 from sage.core.api.function.map_function import MapFunction
 from sage.core.api.function.filter_function import FilterFunction
@@ -22,8 +26,10 @@ class LambdaFilterFunction(FilterFunction):
     
     def __init__(self, lambda_func: Callable[[Any], bool], **kwargs):
         self.lambda_func = lambda_func
-        print(f"🔧 LambdaFilterFunction.__init__ called with lambda_func: {lambda_func}")
-    
+        self.logger.info(
+            f"🔧 LambdaFilterFunction.__init__ called with lambda_func: {lambda_func}"
+        )
+
     def execute(self, data: Any) -> bool:
         try:
             result = self.lambda_func(data)
@@ -151,20 +157,24 @@ def wrap_lambda(func: Callable, func_type: str = None) -> Type[BaseFunction]:
     """
     if func_type is None:
         func_type = detect_lambda_type(func)
-    
-    print(f"🚀 wrap_lambda called: func={func}, func_type={func_type}")
-    
-    if func_type == 'map':
+
+    self.logger.info(f"🚀 wrap_lambda called: func={func}, func_type={func_type}")
+
+    if func_type == "map":
+
         class WrappedMapFunction(LambdaMapFunction):
             def __init__(self, **kwargs):
                 super().__init__(func, **kwargs)
         return WrappedMapFunction
-    
-    elif func_type == 'filter':
-        print(f"🎯 Creating WrappedFilterFunction for lambda: {func}")
+
+    elif func_type == "filter":
+        self.logger.info(f"🎯 Creating WrappedFilterFunction for lambda: {func}")
+
         class WrappedFilterFunction(LambdaFilterFunction):
             def __init__(self, *args, **kwargs):
-                print(f"🔧 WrappedFilterFunction.__init__ called with lambda: {func}, args: {args}, kwargs: {kwargs}")
+                self.logger.info(
+                    f"🔧 WrappedFilterFunction.__init__ called with lambda: {func}, args: {args}, kwargs: {kwargs}"
+                )
                 super().__init__(func, **kwargs)
         return WrappedFilterFunction
     

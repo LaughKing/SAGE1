@@ -1,7 +1,5 @@
-import time
-from sage.core.api.local_environment import LocalEnvironment
-from sage.core.api.remote_environment import RemoteEnvironment
-from sage.core.api.function.sink_function import SinkFunction
+import logging
+from sage.common.utils.logging.custom_logger import CustomLogger
 from sage.core.api.function.batch_function import BatchFunction
 from sage.core.api.function.map_function import MapFunction
 from sage.common.utils.logging.custom_logger import CustomLogger
@@ -27,8 +25,8 @@ class UpperCaseMap(MapFunction):
 # 简单 SinkFunction，直接打印结果
 class PrintSink(SinkFunction):
     def execute(self, data):
-        print(data)
-        return data
+        logging.info(data)
+
 
 def main():
     env = RemoteEnvironment("hello_world_batch_demo")
@@ -44,11 +42,9 @@ def main():
         env.submit()
         # 让主线程睡眠，让批处理自动完成并停止
 
-        time.sleep(3)  # 等待3秒
-    except KeyboardInterrupt:
-        print("停止运行")
-    finally:
-        print("Hello World 批处理示例结束")
+    env.submit(autostop=True)
+    logging.info("Hello World 批处理示例结束")
+
 
 if __name__ == "__main__":
     CustomLogger.disable_global_console_debug()

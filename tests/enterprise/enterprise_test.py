@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """
+import logging
 SAGE Enterprise Edition Test Suite
 企业版测试套件 - 统一的企业版验证工具
 
@@ -26,8 +27,8 @@ class EnterpriseValidator:
         
     def test_license_status(self) -> Dict[str, Any]:
         """测试许可证状态"""
-        print("📜 检查许可证状态...")
-        
+        logging.info("📜 检查许可证状态...")
+
         try:
             result = subprocess.run([
                 sys.executable, 
@@ -55,8 +56,8 @@ class EnterpriseValidator:
     
     def test_enterprise_modules(self) -> Dict[str, Any]:
         """测试企业版模块导入"""
-        print("🏢 检查企业版模块...")
-        
+        logging.info("🏢 检查企业版模块...")
+
         modules = [
             'sage.kernel.enterprise',
             'sage.middleware.enterprise', 
@@ -103,8 +104,8 @@ class EnterpriseValidator:
     
     def test_core_functionality(self) -> Dict[str, Any]:
         """测试核心功能"""
-        print("🔧 检查核心功能...")
-        
+        logging.info("🔧 检查核心功能...")
+
         try:
             # 测试基础sage模块
             import sage
@@ -123,9 +124,9 @@ class EnterpriseValidator:
     
     def run_full_test(self) -> Dict[str, Any]:
         """运行完整测试"""
-        print("🎯 SAGE Enterprise Edition Validation")
-        print("=" * 50)
-        
+        logging.info("🎯 SAGE Enterprise Edition Validation")
+        logging.info("=" * 50)
+
         tests = [
             ('license', self.test_license_status),
             ('modules', self.test_enterprise_modules),
@@ -136,41 +137,46 @@ class EnterpriseValidator:
         for test_name, test_func in tests:
             try:
                 results[test_name] = test_func()
-                status = results[test_name]['status']
-                icon = "✅" if status == 'success' else "⚠️" if status == 'partial' else "❌"
-                print(f"{icon} {test_name}: {results[test_name].get('message', status)}")
+                status = results[test_name]["status"]
+                icon = (
+                    "✅"
+                    if status == "success"
+                    else "⚠️" if status == "partial" else "❌"
+                )
+                logging.info(
+                    f"{icon} {test_name}: {results[test_name].get('message', status)}"
+                )
             except Exception as e:
-                results[test_name] = {
-                    'status': 'error',
-                    'message': f'测试异常: {e}'
-                }
-                print(f"💥 {test_name}: 测试异常")
-        
+                results[test_name] = {"status": "error", "message": f"测试异常: {e}"}
+                logging.info(f"💥 {test_name}: 测试异常")
+
         return results
     
     def print_summary(self, results: Dict[str, Any]):
         """打印测试总结"""
-        print("\n📊 测试总结")
-        print("=" * 30)
-        
+        logging.info("\n📊 测试总结")
+        logging.info("=" * 30)
+
         total_tests = len(results)
-        successful_tests = len([r for r in results.values() if r['status'] == 'success'])
-        
-        print(f"总测试数: {total_tests}")
-        print(f"成功测试: {successful_tests}")
-        print(f"成功率: {successful_tests/total_tests*100:.1f}%")
-        
+        successful_tests = len(
+            [r for r in results.values() if r["status"] == "success"]
+        )
+
+        logging.info(f"总测试数: {total_tests}")
+        logging.info(f"成功测试: {successful_tests}")
+        logging.info(f"成功率: {successful_tests/total_tests*100:.1f}%")
+
         # 详细信息
         for test_name, result in results.items():
-            status = result['status']
-            if status != 'success':
-                print(f"\n⚠️ {test_name} 问题:")
-                if 'error' in result:
-                    print(f"   错误: {result['error']}")
-                if 'modules' in result:
-                    for mod, mod_result in result['modules'].items():
-                        if mod_result['status'] != 'success':
-                            print(f"   {mod}: {mod_result.get('error', '未知错误')}")
+            status = result["status"]
+            if status != "success":
+                logging.info(f"\n⚠️ {test_name} 问题:")
+                if "error" in result:
+                    logging.info(f"   错误: {result['error']}")
+                if "modules" in result:
+                    for mod, mod_result in result["modules"].items():
+                        if mod_result["status"] != "success":
+                            logging.info(f"   {mod}: {mod_result.get('error', '未知错误')}")
 
 def main():
     """主函数"""
@@ -185,10 +191,10 @@ def main():
         sys.exit(0 if all_passed else 1)
         
     except KeyboardInterrupt:
-        print("\n\n🛑 测试被用户取消")
+        logging.info("\n\n🛑 测试被用户取消")
         sys.exit(130)
     except Exception as e:
-        print(f"\n💥 测试异常: {e}")
+        logging.info(f"\n💥 测试异常: {e}")
         sys.exit(1)
 
 if __name__ == "__main__":

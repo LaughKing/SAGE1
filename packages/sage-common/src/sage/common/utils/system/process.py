@@ -1,4 +1,5 @@
 """
+from sage.common.utils.logging.custom_logger import CustomLogger
 Process Management Utilities
 
 System-level process operations independent of any specific class context.
@@ -437,26 +438,30 @@ class SudoManager:
         
         default_prompt = "🔐 This operation requires sudo privileges to manage processes owned by other users."
         if prompt_message:
-            print(prompt_message)
+            self.logger.info(prompt_message)
         else:
-            print(default_prompt)
-        
-        password = getpass.getpass("Please enter your sudo password (or press Enter to skip): ")
-        
+            self.logger.info(default_prompt)
+
+        password = getpass.getpass(
+            "Please enter your sudo password (or press Enter to skip): "
+        )
+
         if password.strip():
             # 验证密码是否正确
-            print("🔍 Verifying sudo password...")
+            self.logger.info("🔍 Verifying sudo password...")
             if verify_sudo_password(password):
                 self._cached_password = password
                 self._password_verified = True
-                print("✅ Sudo password verified successfully")
+                self.logger.info("✅ Sudo password verified successfully")
                 return password
             else:
-                print("❌ Invalid sudo password, will continue without sudo privileges")
+                self.logger.info("❌ Invalid sudo password, will continue without sudo privileges")
                 self._cached_password = ""
                 return ""
         else:
-            print("⚠️  No sudo password provided, may fail to manage processes owned by other users")
+            self.logger.info(
+                "⚠️  No sudo password provided, may fail to manage processes owned by other users"
+            )
             self._cached_password = ""
             return ""
     
@@ -474,8 +479,10 @@ class SudoManager:
         has_access = bool(password)
         
         if not has_access:
-            print("⚠️  Warning: No sudo access available. May fail to manage processes owned by other users.")
-        
+            self.logger.info(
+                "⚠️  Warning: No sudo access available. May fail to manage processes owned by other users."
+            )
+
         return has_access
     
     def has_sudo_access(self) -> bool:

@@ -1,3 +1,4 @@
+from sage.common.utils.logging.custom_logger import CustomLogger
 import asyncio
 import os
 import pipmaster as pm  # Pipmaster for dynamic library install
@@ -56,8 +57,9 @@ async def jina_embed(
         "input": text,
     }
     data_list = await fetch_data(url, headers, data)
-    print(data_list)
-    return data_list[0]['embedding']
+    self.logger.info(data_list)
+    return data_list[0]["embedding"]
+
 
 import os
 import requests

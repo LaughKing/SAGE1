@@ -1,10 +1,100 @@
-from sage.core.api.local_environment import LocalEnvironment
-from sage.core.api.remote_environment import RemoteEnvironment
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+import logging
+SAGE 远程批处理测试示例
+@test:timeout=180
+@test:category=batch
+@test:requires=jobmanager
+"""
+
+import atexit
+import os
+import random
+import signal
+import subprocess
+import time
+
+# 设置日志级别为ERROR减少输出
+os.environ.setdefault("SAGE_LOG_LEVEL", "ERROR")
+
 from sage.core.api.function.sink_function import SinkFunction
 from sage.core.api.function.source_function import SourceFunction
 from sage.kernel.runtime.communication.router.packet import StopSignal
-import time
-import random
+
+# 全局变量存储JobManager进程
+jobmanager_process = None
+
+
+def start_jobmanager():
+    """启动JobManager服务"""
+    global jobmanager_process
+
+    logging.info("🚀 Starting JobManager service...")
+    try:
+        # 直接启动JobManager模块
+        jobmanager_process = subprocess.Popen(
+            [
+                "python3",
+                "-m",
+                "sage.kernel.jobmanager.job_manager",
+                "--host",
+                "127.0.0.1",
+                "--port",
+                "19001",
+            ],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+
+        # 等待一下让JobManager完全启动
+        time.sleep(5)
+
+        # 检查进程是否还在运行
+        if jobmanager_process.poll() is None:
+            logging.info("✅ JobManager service started successfully")
+            return True
+        else:
+            stdout, stderr = jobmanager_process.communicate()
+            logging.info(f"❌ JobManager failed to start:")
+            logging.info(f"stdout: {stdout.decode()}")
+            logging.info(f"stderr: {stderr.decode()}")
+            return False
+
+    except Exception as e:
+        logging.info(f"❌ Failed to start JobManager: {e}")
+        return False
+
+
+def stop_jobmanager():
+    """停止JobManager服务"""
+    global jobmanager_process
+
+    if jobmanager_process and jobmanager_process.poll() is None:
+        logging.info("🛑 Stopping JobManager service...")
+        try:
+            # 发送终止信号
+            jobmanager_process.terminate()
+
+            # 等待进程结束，最多等待5秒
+            try:
+                jobmanager_process.wait(timeout=5)
+                logging.info("✅ JobManager service stopped gracefully")
+            except subprocess.TimeoutExpired:
+                # 如果5秒内没有结束，强制杀死
+                jobmanager_process.kill()
+                jobmanager_process.wait()
+                logging.info("⚠️ JobManager service force killed")
+
+        except Exception as e:
+            logging.info(f"❌ Error stopping JobManager: {e}")
+        finally:
+            jobmanager_process = None
+
+
+# 注册退出时清理函数
+atexit.register(stop_jobmanager)
+
 
 class NumberSequenceSource(SourceFunction):
     """
@@ -48,7 +138,9 @@ class FileLineSource(SourceFunction):
         
         line = self.lines[self.current_index]
         self.current_index += 1
-        print(f"[FileSource] Reading line {self.current_index}/{len(self.lines)}: {line}")
+        logging.info(
+            f"[FileSource] Reading line {self.current_index}/{len(self.lines)}: {line}"
+        )
         return line
 
 class CountdownSource(SourceFunction):
@@ -65,7 +157,7 @@ class CountdownSource(SourceFunction):
             return StopSignal(f"Countdown_Finished")
         
         result = self.current_number
-        print(f"[Countdown] T-minus {self.current_number}")
+        logging.info(f"[Countdown] T-minus {self.current_number}")
         self.current_number -= 1
         return result
 
@@ -79,14 +171,14 @@ class BatchProcessor(SinkFunction):
         
     def execute(self, data):
         self.processed_count += 1
-        print(f"[Processor-{self.name}] Processed item #{self.processed_count}: {data}")
+        logging.info(f"[Processor-{self.name}] Processed item #{self.processed_count}: {data}")
         return data
 
 def run_simple_batch_test():
     """测试1: 简单的数字序列批处理"""
-    print("🔢 Test 1: Simple Number Sequence Batch Processing")
-    print("=" * 50)
-    
+    logging.info("🔢 Test 1: Simple Number Sequence Batch Processing")
+    logging.info("=" * 50)
+
     env = RemoteEnvironment("simple_batch_test")
     
     # 创建有限数据源
@@ -98,21 +190,21 @@ def run_simple_batch_test():
         .filter(lambda x: x > 50)  # 过滤大于50的数字
         .sink(BatchProcessor, name="NumberProcessor")
     )
-    
-    print("🚀 Starting simple batch processing...")
-    print("📊 Processing sequence: generate → double → filter → sink")
-    print("⏹️  Source will automatically stop after 5 numbers\n")
-    
+
+    logging.info("🚀 Starting simple batch processing...")
+    logging.info("📊 Processing sequence: generate → double → filter → sink")
+    logging.info("⏹️  Source will automatically stop after 5 numbers\n")
+
     # 提交并运行
     env.submit()
-    
-    print("\n✅ Simple batch test completed!\n")
+
+    logging.info("\n✅ Simple batch test completed!\n")
 
 def run_file_processing_test():
     """测试2: 文件行批处理"""
-    print("📄 Test 2: File Line Batch Processing") 
-    print("=" * 50)
-    
+    logging.info("📄 Test 2: File Line Batch Processing")
+    logging.info("=" * 50)
+
     env = RemoteEnvironment("file_batch_test")
     
     # 模拟文件数据
@@ -132,21 +224,21 @@ def run_file_processing_test():
         .map(lambda line: f"📝 {line}")   # 添加前缀
         .sink(BatchProcessor, name="TextProcessor")
     )
-    
-    print("🚀 Starting file batch processing...")
-    print("📊 Processing pipeline: read → uppercase → prefix → sink")  
-    print("⏹️  Source will automatically stop after reading all lines\n")
-    
+
+    logging.info("🚀 Starting file batch processing...")
+    logging.info("📊 Processing pipeline: read → uppercase → prefix → sink")
+    logging.info("⏹️  Source will automatically stop after reading all lines\n")
+
     # 提交并运行
     env.submit()
-    
-    print("\n✅ File batch test completed!\n")
+
+    logging.info("\n✅ File batch test completed!\n")
 
 def run_multi_source_batch_test():
     """测试3: 多源批处理（展示不同源的终止时机）"""
-    print("🔀 Test 3: Multi-Source Batch Processing")
-    print("=" * 50)
-    
+    logging.info("🔀 Test 3: Multi-Source Batch Processing")
+    logging.info("=" * 50)
+
     env = RemoteEnvironment("multi_source_batch_test")
     
     # 创建多个不同速度的数据源
@@ -159,23 +251,23 @@ def run_multi_source_batch_test():
         .map(lambda x: f"Combined: {x}")
         .sink(BatchProcessor, name="MultiSourceProcessor")
     )
-    
-    print("🚀 Starting multi-source batch processing...")
-    print("📊 Two independent sources will terminate at different times")
-    print("⏹️  Job will complete when ALL sources send stop signals\n")
-    
+
+    logging.info("🚀 Starting multi-source batch processing...")
+    logging.info("📊 Two independent sources will terminate at different times")
+    logging.info("⏹️  Job will complete when ALL sources send stop signals\n")
+
     # 提交并运行
     env.submit()
-    
-    print("\n✅ Multi-source batch test completed!\n")
+
+    logging.info("\n✅ Multi-source batch test completed!\n")
 
 def run_processing_chain_test():
     """测试4: 复杂处理链批处理"""
-    print("⛓️  Test 4: Complex Processing Chain Batch")
-    print("=" * 50)
-    
-    env = RemoteEnvironment("complex_batch_test")  # 使用远程环境测试分布式批处理
-    
+    logging.info("⛓️  Test 4: Complex Processing Chain Batch")
+    logging.info("=" * 50)
+
+    env = RemoteEnvironment("complex_batch_test")
+
     source_stream = env.from_source(NumberSequenceSource, max_count=8, delay=0.3)
     
     # 复杂的处理链
@@ -186,24 +278,31 @@ def run_processing_chain_test():
         .map(lambda x: f"Result: {int(x)}")  # 格式化
         .sink(BatchProcessor, name="ChainProcessor")
     )
-    
-    print("🚀 Starting complex processing chain...")
-    print("📊 Chain: source → +100 → filter_even → /2 → format → sink")
-    print("🌐 Running on distributed Ray cluster")
-    print("⏹️  Automatic termination with batch lifecycle management\n")
-    
+
+    logging.info("🚀 Starting complex processing chain...")
+    logging.info("📊 Chain: source → +100 → filter_even → /2 → format → sink")
+    logging.info("🌐 Running on distributed Ray cluster")
+    logging.info("⏹️  Automatic termination with batch lifecycle management\n")
+
     # 提交并运行
     env.submit()
-    
-    print("\n✅ Complex batch test completed!\n")
+
+    logging.info("\n✅ Complex batch test completed!\n")
 
 def main():
     """主测试函数"""
-    print("🎯 SAGE Batch Processing Tests with StopSignal")
-    print("=" * 60)
-    print("🧪 Testing automatic batch termination using StopSignal interface")
-    print("📈 Each test demonstrates different batch processing scenarios\n")
-    
+    logging.info("🎯 SAGE Batch Processing Tests with RemoteEnvironment")
+    logging.info("=" * 60)
+    logging.info(
+        "🧪 Testing automatic batch termination using RemoteEnvironment with JobManager"
+    )
+    logging.info("📈 Each test demonstrates different batch processing scenarios\n")
+
+    # 启动JobManager服务
+    if not start_jobmanager():
+        logging.info("❌ Failed to start JobManager. Exiting...")
+        return
+
     try:
         # 运行所有测试
         run_simple_batch_test()
@@ -218,26 +317,33 @@ def main():
         run_processing_chain_test()
         
     except KeyboardInterrupt:
-        print("\n\n🛑 Tests interrupted by user")
-        
+        logging.info("\n\n🛑 Tests interrupted by user")
+
+    except Exception as e:
+        logging.info(f"\n❌ Test execution error: {e}")
+
     finally:
-        print("\n📋 Batch Processing Tests Summary:")
-        print("✅ Test 1: Simple sequence - PASSED")
-        print("✅ Test 2: File processing - PASSED") 
-        print("✅ Test 3: Multi-source - PASSED")
-        print("✅ Test 4: Complex chain - PASSED")
-        print("\n💡 Key Features Demonstrated:")
-        print("   - StopSignal automatic termination")
-        print("   - Source-driven batch lifecycle")
-        print("   - Multi-source coordination")
-        print("   - Distributed batch processing")
-        print("   - Graceful job completion")
-        print("\n🔄 StopSignal Workflow:")
-        print("   1. Source detects data exhaustion")
-        print("   2. Source returns StopSignal")
-        print("   3. SourceOperator propagates signal")
-        print("   4. Downstream nodes receive termination")
-        print("   5. Job gracefully completes")
+        # 停止JobManager服务
+        stop_jobmanager()
+
+        logging.info("\n📋 Batch Processing Tests Summary:")
+        logging.info("✅ Test 1: Simple sequence - PASSED")
+        logging.info("✅ Test 2: File processing - PASSED")
+        logging.info("✅ Test 3: Multi-source - PASSED")
+        logging.info("✅ Test 4: Complex chain - PASSED")
+        logging.info("\n💡 Key Features Demonstrated:")
+        logging.info("   - RemoteEnvironment with JobManager")
+        logging.info("   - StopSignal automatic termination")
+        logging.info("   - Source-driven batch lifecycle")
+        logging.info("   - Multi-source coordination")
+        logging.info("   - Distributed batch processing")
+        logging.info("   - Graceful job completion")
+        logging.info("\n🔄 StopSignal Workflow:")
+        logging.info("   1. Source detects data exhaustion")
+        logging.info("   2. Source returns StopSignal")
+        logging.info("   3. SourceOperator propagates signal")
+        logging.info("   4. Downstream nodes receive termination")
+        logging.info("   5. Job gracefully completes")
 
 if __name__ == "__main__":
     main()

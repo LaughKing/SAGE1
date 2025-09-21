@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """
+import logging
 SAGE License Migration Tool
 Migrate from legacy scripts/sage-license.py to new tools/license/ structure
 """
@@ -12,31 +13,31 @@ from pathlib import Path
 
 def migrate_license_tools():
     """Migrate license management to new structure"""
-    print("🔄 SAGE License Tools Migration")
-    print("=" * 40)
-    
+    logging.info("🔄 SAGE License Tools Migration")
+    logging.info("=" * 40)
+
     project_root = Path(__file__).parent.parent
     old_script = project_root / "scripts" / "sage-license.py"
     new_tools_dir = project_root / "tools" / "license"
     
     # Check if old script exists
     if not old_script.exists():
-        print("✅ No legacy sage-license.py found - already migrated")
+        logging.info("✅ No legacy sage-license.py found - already migrated")
         return True
-    
-    print(f"📁 Found legacy script: {old_script}")
-    print(f"🎯 Target directory: {new_tools_dir}")
-    
+
+    logging.info(f"📁 Found legacy script: {old_script}")
+    logging.info(f"🎯 Target directory: {new_tools_dir}")
+
     # Check if new tools exist
     if new_tools_dir.exists():
-        print("✅ New license tools already exist")
-        
+        logging.info("✅ New license tools already exist")
+
         # Create backup of old script
         backup_path = old_script.with_suffix('.py.backup')
         if not backup_path.exists():
             shutil.copy2(old_script, backup_path)
-            print(f"💾 Created backup: {backup_path}")
-        
+            logging.info(f"💾 Created backup: {backup_path}")
+
         # Create deprecation notice
         deprecation_script = project_root / "scripts" / "sage-license.py"
         with open(deprecation_script, 'w') as f:
@@ -62,12 +63,12 @@ import subprocess
 from pathlib import Path
 
 def main():
-    print("🚨 DEPRECATED SCRIPT")
-    print("This script has been moved to tools/license/")
-    print("")
-    print("Please use instead:")
-    print("  python tools/license/sage_license.py", " ".join(sys.argv[1:]))
-    print("")
+    logging.info("🚨 DEPRECATED SCRIPT")
+    logging.info("This script has been moved to tools/license/")
+    logging.info("")
+    logging.info("Please use instead:")
+    logging.info("  python tools/license/sage_license.py", " ".join(sys.argv[1:]))
+    logging.info("")
     
     # Forward to new script
     new_script = Path(__file__).parent.parent / "tools" / "license" / "sage_license.py"
@@ -75,32 +76,33 @@ def main():
         cmd = [sys.executable, str(new_script)] + sys.argv[1:]
         subprocess.run(cmd)
     else:
-        print("❌ New license tools not found!")
+        logging.info("❌ New license tools not found!")
         sys.exit(1)
 
 if __name__ == '__main__':
     main()
-''')
-        
-        print("✅ Updated scripts/sage-license.py with deprecation notice")
-        
+'''
+            )
+
+        logging.info("✅ Updated scripts/sage-license.py with deprecation notice")
+
     else:
-        print("❌ New license tools not found!")
+        logging.info("❌ New license tools not found!")
         return False
     
     # Update documentation references
     docs_updated = update_documentation_references(project_root)
     if docs_updated:
-        print("✅ Updated documentation references")
-    
-    print("")
-    print("🎉 Migration completed successfully!")
-    print("")
-    print("Next steps:")
-    print("1. Test new license tools: python tools/license/sage_license.py status")
-    print("2. Update your scripts to use new paths")
-    print("3. Remove backup files when confident in migration")
-    
+        logging.info("✅ Updated documentation references")
+
+    logging.info("")
+    logging.info("🎉 Migration completed successfully!")
+    logging.info("")
+    logging.info("Next steps:")
+    logging.info("1. Test new license tools: python tools/license/sage_license.py status")
+    logging.info("2. Update your scripts to use new paths")
+    logging.info("3. Remove backup files when confident in migration")
+
     return True
 
 
@@ -133,25 +135,25 @@ def update_documentation_references(project_root):
                 
                 with open(doc_file, 'w') as f:
                     f.write(updated_content)
-                
-                print(f"📝 Updated {doc_file.name}")
+
+                logging.info(f"📝 Updated {doc_file.name}")
                 updates_made = True
                 
         except Exception as e:
-            print(f"⚠️  Could not update {doc_file}: {e}")
-    
+            logging.info(f"⚠️  Could not update {doc_file}: {e}")
+
     return updates_made
 
 
 def test_new_tools():
     """Test that new license tools work"""
-    print("\n🧪 Testing new license tools...")
-    
+    logging.info("\n🧪 Testing new license tools...")
+
     project_root = Path(__file__).parent.parent
     sage_license = project_root / "tools" / "license" / "sage_license.py"
     
     if not sage_license.exists():
-        print("❌ New license tools not found!")
+        logging.info("❌ New license tools not found!")
         return False
     
     try:
@@ -161,14 +163,14 @@ def test_new_tools():
         ], capture_output=True, text=True, timeout=10)
         
         if result.returncode == 0:
-            print("✅ New license tools working correctly")
+            logging.info("✅ New license tools working correctly")
             return True
         else:
-            print(f"⚠️  New tools returned error: {result.stderr}")
+            logging.info(f"⚠️  New tools returned error: {result.stderr}")
             return False
             
     except Exception as e:
-        print(f"❌ Error testing new tools: {e}")
+        logging.info(f"❌ Error testing new tools: {e}")
         return False
 
 
@@ -178,9 +180,9 @@ def main():
         sys.exit(1)
     
     if test_new_tools():
-        print("\n🎯 Migration verification successful!")
+        logging.info("\n🎯 Migration verification successful!")
     else:
-        print("\n⚠️  Migration completed but tools need verification")
+        logging.info("\n⚠️  Migration completed but tools need verification")
 
 
 if __name__ == '__main__':

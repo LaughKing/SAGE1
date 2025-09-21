@@ -1,3 +1,4 @@
+from sage.common.utils.logging.custom_logger import CustomLogger
 from __future__ import annotations
 from typing import Type, TYPE_CHECKING, Union, Any, List, TypeVar, Generic, get_args, get_origin, Callable
 from sage.core.api.base_environment import BaseEnvironment
@@ -55,7 +56,9 @@ class ConnectedStreams:
         tr = SinkTransformation(self._environment, function, *args, **kwargs)
         return self._apply(tr)
 
-    def print(self, prefix: str = "", separator: str = " | ", colored: bool = True) -> 'DataStream':
+    def self.logger.info(
+        self, prefix: str = "", separator: str = " | ", colored: bool = True
+    ) -> "DataStream":
         """
         便捷的打印方法 - 将连接的数据流输出到控制台
         
@@ -128,7 +131,7 @@ class ConnectedStreams:
             result = (stream1
                 .connect(stream2)
                 .comap(ProcessorCoMap)
-                .print("CoMap Result"))
+                .self.logger.info("CoMap Result"))
             ```
         """
         if callable(function) and not isinstance(function, type):
@@ -220,7 +223,7 @@ class ConnectedStreams:
                 .keyby(lambda x: x["user_id"])
                 .connect(order_stream.keyby(lambda x: x["user_id"]))
                 .join(UserOrderJoin)
-                .print("Join Results"))
+                .self.logger.info("Join Results"))
             ```
         """
         # 验证输入
@@ -416,7 +419,9 @@ class ConnectedStreams:
             *params: The ignored parameters
         """
         if any(params):
-            print(f"⚠️  Warning: {param_type} ignored in lambda/callable CoMap usage: {params}")
+            self.logger.info(
+                f"⚠️  Warning: {param_type} ignored in lambda/callable CoMap usage: {params}"
+            )
 
     # ---------------------------------------------------------------------    # CoMap function parsing methods
     # ---------------------------------------------------------------------
@@ -523,7 +528,9 @@ class ConnectedStreams:
             *params: The ignored parameters
         """
         if any(params):
-            print(f"⚠️  Warning: {param_type} ignored in lambda/callable CoMap usage: {params}")
+            self.logger.info(
+                f"⚠️  Warning: {param_type} ignored in lambda/callable CoMap usage: {params}"
+            )
 
     # ---------------------------------------------------------------------
     # internal methods

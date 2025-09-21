@@ -176,7 +176,9 @@ class DataStream(Generic[T]):
     # ---------------------------------------------------------------------
     # quick helper api
     # ---------------------------------------------------------------------
-    def print(self, prefix: str = "", separator: str = " | ", colored: bool = True) -> "DataStream":
+    def logging.info(
+        self, prefix: str = "", separator: str = " | ", colored: bool = True
+    ) -> "DataStream":
         """
         便捷的打印方法 - 将数据流输出到控制台
         
@@ -192,9 +194,9 @@ class DataStream(Generic[T]):
             
         Example:
             ```python
-            stream.map(some_function).print("Debug").sink(FileSink, config)
-            stream.print("结果: ")  # 带前缀打印
-            stream.print()  # 简单打印
+            stream.map(some_function).logging.info("Debug").sink(FileSink, config)
+            stream.logging.info("结果: ")  # 带前缀打印
+            stream.logging.info()  # 简单打印
             ```
         """
         from sage.lib.io_utils.sink import PrintSink

@@ -1,4 +1,5 @@
 """
+from sage.common.utils.logging.custom_logger import CustomLogger
 Enhanced Test Runner - Integrated from scripts/test_runner.py
 
 This tool provides intelligent test execution with support for diff-based testing,
@@ -33,15 +34,27 @@ class EnhancedTestRunner:
         
         # Get project name from path
         project_name = self.project_root.name
-        
-        # Set up symlink to SAGE home
-        setup_project_symlinks(self.project_root, project_name)
-        
-        # Use .sage subdirectories for all output
-        sage_link = self.project_root / '.sage'
-        self.test_logs_dir = sage_link / 'logs'
-        self.reports_dir = sage_link / 'reports'
-        
+
+        # 设置SAGE环境并获取目录路径
+        try:
+            sage_paths = get_sage_paths(str(self.project_root))
+            sage_paths.setup_environment_variables()
+            self.test_logs_dir = sage_paths.logs_dir
+            self.reports_dir = sage_paths.reports_dir
+        except Exception as e:
+            self.logger.info(f"Warning: Failed to setup SAGE environment: {e}")
+            # 回退到使用统一的路径管理系统（不传递project_root让它自动检测）
+            try:
+                fallback_sage_paths = get_sage_paths()
+                self.test_logs_dir = fallback_sage_paths.logs_dir
+                self.reports_dir = fallback_sage_paths.reports_dir
+            except Exception as fallback_e:
+                self.logger.info(f"Error: Could not setup fallback SAGE environment: {fallback_e}")
+                # 最后的回退：使用项目根目录的.sage
+                sage_dir = self.project_root / ".sage"
+                self.test_logs_dir = sage_dir / "logs"
+                self.reports_dir = sage_dir / "reports"
+
         # Check if pytest-benchmark is available
         self.has_benchmark = self._check_pytest_benchmark_available()
         
@@ -60,9 +73,9 @@ class EnhancedTestRunner:
     def run_tests(self, mode: str = 'diff', **kwargs) -> Dict:
         """Run tests based on specified mode."""
         try:
-            print(f"\n🚀 Starting test run (mode: {mode})")
-            
-            if mode == 'all':
+            self.logger.info(f"\n🚀 Starting test run (mode: {mode})")
+
+            if mode == "all":
                 result = self._run_all_tests(**kwargs)
             elif mode == 'diff':
                 result = self._run_diff_tests(**kwargs)
@@ -70,7 +83,7 @@ class EnhancedTestRunner:
                 package = kwargs.get('package')
                 if not package:
                     raise SAGEDevToolkitError("Package name required for package mode")
-                print(f"📦 Testing package: {package}")
+                self.logger.info(f"📦 Testing package: {package}")
                 result = self._run_package_tests(package, **kwargs)
             elif mode == 'failed':
                 result = self._run_failed_tests(**kwargs)
@@ -78,19 +91,28 @@ class EnhancedTestRunner:
                 raise SAGEDevToolkitError(f"Unknown test mode: {mode}")
             
             # Show final summary
-            summary = result.get('summary', {})
-            total = summary.get('total', 0)
-            passed = summary.get('passed', 0)
-            failed = summary.get('failed', 0)
-            execution_time = result.get('execution_time', 0)
-            
-            print(f"\n📊 Test Summary:")
-            print(f"   Total: {total}")
-            print(f"   Passed: {passed} ✅")
-            print(f"   Failed: {failed} ❌")
-            print(f"   Duration: {execution_time:.2f}s")
-            print(f"   Status: {'SUCCESS' if result.get('status') == 'success' else 'FAILED'}")
-            
+            summary = result.get("summary", {})
+            total = summary.get("total", 0)
+            passed = summary.get("passed", 0)
+            failed = summary.get("failed", 0)
+            execution_time = result.get("execution_time", 0)
+
+            self.logger.info(f"\n📊 Test Summary:")
+            self.logger.info(f"   Total: {total}")
+            self.logger.info(f"   Passed: {passed} ✅")
+            self.logger.info(f"   Failed: {failed} ❌")
+            self.logger.info(f"   Duration: {execution_time:.2f}s")
+            self.logger.info(
+                f"   Status: {'SUCCESS' if result.get('status') == 'success' else 'FAILED'}"
+            )
+            self.logger.info(f"   Logs: {self.test_logs_dir}")
+            self.logger.info(f"   Reports: {self.reports_dir}")
+
+            # 检查中间结果放置
+            self.logger.info("\n" + "=" * 50)
+            self.intermediate_checker.print_check_result()
+            self.logger.info("=" * 50)
+
             # Update failure cache with results (except for failed mode to avoid recursion)
             if mode != 'failed':
                 self.failure_cache.update_from_test_results(result)
@@ -389,23 +411,24 @@ class EnhancedTestRunner:
         """Execute test files sequentially."""
         results = []
         total_tests = len(test_files)
-        
-        print(f"\n🧪 Running {total_tests} test files sequentially...")
-        
+
+        self.logger.info(f"\n🧪 Running {total_tests} test files sequentially...")
+
         for i, test_file in enumerate(test_files, 1):
-            print(f"[{i}/{total_tests}] Running: {self._simplify_test_path(test_file)}")
+            simplified_path = self._simplify_test_path(test_file)
+            self.logger.info(f"[{i}/{total_tests}] {simplified_path}...", end="", flush=True)
             result = self._run_single_test_file(test_file, timeout, quick)
-            
-            # Show immediate result
-            status = "✅ PASSED" if result['passed'] else "❌ FAILED"
-            duration = result.get('duration', 0)
-            print(f"  {status} ({duration:.2f}s)")
-            
+
+            # Show immediate result on same line
+            status = "✅" if result["passed"] else "❌"
+            duration = result.get("duration", 0)
+            self.logger.info(f" {status} ({duration:.1f}s)")
+
             results.append(result)
             
             # Exit early on failure if quick mode
-            if quick and not result['passed']:
-                print(f"\n❌ Stopping on first failure (quick mode)")
+            if quick and not result["passed"]:
+                self.logger.info(f"\n❌ Stopping on first failure (quick mode)")
                 break
         
         return results
@@ -415,9 +438,11 @@ class EnhancedTestRunner:
         results = []
         total_tests = len(test_files)
         completed = 0
-        
-        print(f"\n🧪 Running {total_tests} test files in parallel (workers: {workers})...")
-        
+
+        self.logger.info(
+            f"\n🧪 Running {total_tests} test files in parallel (workers: {workers})..."
+        )
+
         with ThreadPoolExecutor(max_workers=workers) as executor:
             # Submit all test files
             future_to_file = {
@@ -432,20 +457,26 @@ class EnhancedTestRunner:
                 
                 try:
                     result = future.result()
-                    status = "✅ PASSED" if result['passed'] else "❌ FAILED"
-                    duration = result.get('duration', 0)
-                    print(f"[{completed}/{total_tests}] {self._simplify_test_path(test_file)}: {status} ({duration:.2f}s)")
+                    status = "✅" if result["passed"] else "❌"
+                    duration = result.get("duration", 0)
+                    simplified_path = self._simplify_test_path(test_file)
+                    self.logger.info(
+                        f"[{completed}/{total_tests}] {simplified_path} {status} ({duration:.1f}s)"
+                    )
                     results.append(result)
                 except Exception as e:
-                    print(f"[{completed}/{total_tests}] {self._simplify_test_path(test_file)}: ❌ ERROR ({e})")
-                    results.append({
-                        'test_file': self._simplify_test_path(test_file),
-                        'passed': False,
-                        'duration': 0,
-                        'output': '',
-                        'error': str(e)
-                    })
-        
+                    simplified_path = self._simplify_test_path(test_file)
+                    self.logger.info(f"[{completed}/{total_tests}] {simplified_path} ❌ ERROR")
+                    results.append(
+                        {
+                            "test_file": simplified_path,
+                            "passed": False,
+                            "duration": 0,
+                            "output": "",
+                            "error": str(e),
+                        }
+                    )
+
         return results
     
     def _get_package_from_test_file(self, test_file: Path) -> str:

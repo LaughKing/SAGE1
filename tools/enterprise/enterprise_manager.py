@@ -1,4 +1,5 @@
 """
+import logging
 SAGE Enterprise Installation Manager
 
 This module provides utilities for installing and validating SAGE enterprise features
@@ -113,10 +114,10 @@ class SAGEEnterpriseInstaller:
                 "message": "No valid commercial license found. Enterprise features require a valid license.",
                 "license_status": license_status
             }
-        
-        print("✅ Valid commercial license found")
-        print(f"📄 Licensed features: {', '.join(license_status['features'])}")
-        
+
+        logging.info("✅ Valid commercial license found")
+        logging.info(f"📄 Licensed features: {', '.join(license_status['features'])}")
+
         # Install enterprise packages
         enterprise_packages = [
             "intellistream-sage-kernel[enterprise]",
@@ -125,34 +126,27 @@ class SAGEEnterpriseInstaller:
         
         results = []
         for package in enterprise_packages:
-            print(f"📦 Installing {package}...")
-            
+            logging.info(f"📦 Installing {package}...")
+
             try:
                 result = subprocess.run([
                     sys.executable, "-m", "pip", "install", package
                 ], capture_output=True, text=True)
                 
                 if result.returncode == 0:
-                    print(f"✅ Successfully installed {package}")
-                    results.append({
-                        "package": package,
-                        "status": "success"
-                    })
+                    logging.info(f"✅ Successfully installed {package}")
+                    results.append({"package": package, "status": "success"})
                 else:
-                    print(f"❌ Failed to install {package}")
-                    results.append({
-                        "package": package,
-                        "status": "failed",
-                        "error": result.stderr
-                    })
+                    logging.info(f"❌ Failed to install {package}")
+                    results.append(
+                        {"package": package, "status": "failed", "error": result.stderr}
+                    )
             except Exception as e:
-                print(f"❌ Error installing {package}: {e}")
-                results.append({
-                    "package": package,
-                    "status": "failed",
-                    "error": str(e)
-                })
-        
+                logging.info(f"❌ Error installing {package}: {e}")
+                results.append(
+                    {"package": package, "status": "failed", "error": str(e)}
+                )
+
         successful = sum(1 for r in results if r["status"] == "success")
         
         return {
@@ -279,34 +273,38 @@ def main():
     
     if args.command == "check":
         status = check_enterprise_features()
-        print("\n🔍 SAGE Enterprise Status")
-        print("=" * 40)
-        print(f"License Type: {status['license']['type']}")
-        print(f"Enterprise Enabled: {'✅ Yes' if status['license']['commercial_enabled'] else '❌ No'}")
-        print(f"Available Features: {', '.join(status['license']['features'])}")
-        print(f"Components Available: {status['summary']['components_available']}")
-        
+        logging.info("\n🔍 SAGE Enterprise Status")
+        logging.info("=" * 40)
+        logging.info(f"License Type: {status['license']['type']}")
+        logging.info(
+            f"Enterprise Enabled: {'✅ Yes' if status['license']['commercial_enabled'] else '❌ No'}"
+        )
+        logging.info(f"Available Features: {', '.join(status['license']['features'])}")
+        logging.info(f"Components Available: {status['summary']['components_available']}")
+
     elif args.command == "install":
         result = installer.install_enterprise_features(args.license_key)
-        print(f"\n📦 Installation Result: {result['status']}")
-        if result['status'] == 'success':
-            print(f"✅ Installed {result['installed_packages']}/{result['total_packages']} packages")
+        logging.info(f"\n📦 Installation Result: {result['status']}")
+        if result["status"] == "success":
+            logging.info(
+                f"✅ Installed {result['installed_packages']}/{result['total_packages']} packages"
+            )
         else:
-            print("❌ Installation failed - check license status")
-            
+            logging.info("❌ Installation failed - check license status")
+
     elif args.command == "validate":
         validation = installer.validate_enterprise_installation()
-        print("\n🧪 Enterprise Installation Validation")
-        print("=" * 45)
-        for component in validation['components']:
-            status_icon = "✅" if component['status'] == 'available' else "❌"
-            print(f"{status_icon} {component['component']}: {component['description']}")
-        
+        logging.info("\n🧪 Enterprise Installation Validation")
+        logging.info("=" * 45)
+        for component in validation["components"]:
+            status_icon = "✅" if component["status"] == "available" else "❌"
+            logging.info(f"{status_icon} {component['component']}: {component['description']}")
+
     elif args.command == "commands":
         cmd = installer.get_installation_command(args.mode)
-        print(f"\n💡 Installation command for {args.mode} mode:")
-        print(f"   {cmd}")
-        
+        logging.info(f"\n💡 Installation command for {args.mode} mode:")
+        logging.info(f"   {cmd}")
+
     else:
         parser.print_help()
 

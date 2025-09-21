@@ -1,13 +1,94 @@
 """
+import logging
 批处理算子和函数使用示例
 
 这个文件展示了如何使用新的BatchOperator和BatchFunction来创建
 用户友好的批处理任务。
 """
 
-from typing import List, Any, Iterator
-from sage.core.api.function.batch_function import BatchFunction, SimpleBatchFunction, FileBatchFunction
-from sage.core.operator.batch_operator import BatchOperator, BatchSourceOperator
+from typing import Any, Iterator, List
+
+from sage.core.api.function.batch_function import BatchFunction
+from sage.core.api.function.sink_function import SinkFunction
+from sage.core.api.local_environment import LocalEnvironment
+
+
+class SimpleBatchFunction(BatchFunction):
+    """简单的列表数据批处理函数"""
+
+    def __init__(self, data_list: List[Any], ctx=None, **kwargs):
+        super().__init__(**kwargs)
+        self.data_list = data_list
+        self.current_index = 0
+        self.ctx = ctx
+
+    def execute(self) -> Any:
+        if self.current_index >= len(self.data_list):
+            return None
+        result = self.data_list[self.current_index]
+        self.current_index += 1
+        return result
+
+    def get_total_count(self) -> int:
+        return len(self.data_list)
+
+    def get_progress(self) -> tuple:
+        return self.current_index, len(self.data_list)
+
+    def get_completion_rate(self) -> float:
+        if len(self.data_list) == 0:
+            return 1.0
+        return self.current_index / len(self.data_list)
+
+    def is_finished(self) -> bool:
+        return self.current_index >= len(self.data_list)
+
+
+class FileBatchFunction(BatchFunction):
+    """文件行读取批处理函数"""
+
+    def __init__(self, file_path: str, **kwargs):
+        super().__init__(**kwargs)
+        self.file_path = file_path
+        self.file_handle = None
+        self.line_count = 0
+        self.finished = False
+
+    def execute(self) -> Any:
+        if self.finished:
+            return None
+
+        if self.file_handle is None:
+            try:
+                self.file_handle = open(self.file_path, "r", encoding="utf-8")
+            except FileNotFoundError:
+                logging.info(f"文件 {self.file_path} 不存在，返回模拟数据")
+                self.finished = True
+                return f"模拟文件行 {self.line_count}"
+
+        try:
+            line = self.file_handle.readline()
+            if not line:
+                self.finished = True
+                if self.file_handle:
+                    self.file_handle.close()
+                return None
+
+            self.line_count += 1
+            return line.strip()
+        except Exception as e:
+            logging.info(f"读取文件错误: {e}")
+            self.finished = True
+            if self.file_handle:
+                self.file_handle.close()
+            return None
+
+
+class MockContext:
+    """模拟上下文类"""
+
+    def __init__(self, name: str):
+        self.name = name
 
 
 class NumberRangeBatchFunction(BatchFunction):
@@ -102,46 +183,55 @@ class BatchTaskExample:
                 self.logger = MockLogger()
         
         class MockLogger:
-            def info(self, msg): print(f"INFO: {msg}")
-            def debug(self, msg): print(f"DEBUG: {msg}")
-            def warning(self, msg): print(f"WARNING: {msg}")
-            def error(self, msg): print(f"ERROR: {msg}")
-        
-        print("=== 批处理算子使用示例 ===")
-        
+            def info(self, msg):
+                logging.info(f"INFO: {msg}")
+
+            def debug(self, msg):
+                logging.info(f"DEBUG: {msg}")
+
+            def warning(self, msg):
+                logging.info(f"WARNING: {msg}")
+
+            def error(self, msg):
+                logging.info(f"ERROR: {msg}")
+
+        logging.info("=== 批处理算子使用示例 ===")
+
         # 1. 创建简单列表批处理
-        print("\n1. 简单列表批处理:")
+        logging.info("\n1. 简单列表批处理:")
         data = ["apple", "banana", "cherry", "date", "elderberry"]
         ctx = MockContext("simple_batch_example")
         simple_batch = SimpleBatchFunction(data, ctx)
-        
-        print(f"总记录数: {simple_batch.get_total_count()}")
-        
+
+        logging.info(f"总记录数: {simple_batch.get_total_count()}")
+
         # 模拟处理过程
         for i in range(7):  # 多处理几次以展示完成状态
             result = simple_batch.execute()
             current, total = simple_batch.get_progress()
             completion = simple_batch.get_completion_rate()
-            
-            print(f"第{i+1}次执行: 结果={result}, 进度={current}/{total} ({completion:.1%}), 完成={simple_batch.is_finished()}")
-            
+
+            logging.info(
+                f"第{i+1}次执行: 结果={result}, 进度={current}/{total} ({completion:.1%}), 完成={simple_batch.is_finished()}"
+            )
+
             if simple_batch.is_finished():
                 break
         
         # 2. 数字范围批处理
-        print("\n2. 数字范围批处理:")
+        logging.info("\n2. 数字范围批处理:")
         ctx2 = MockContext("number_batch_example")
         number_batch = NumberRangeBatchFunction(1, 6, 1, ctx2)
-        print(f"总记录数: {number_batch.get_total_count()}")
-        
+        logging.info(f"总记录数: {number_batch.get_total_count()}")
+
         while not number_batch.is_finished():
             result = number_batch.execute()
             current, total = number_batch.get_progress()
             completion = number_batch.get_completion_rate()
-            
-            print(f"处理结果: {result}, 进度: {current}/{total} ({completion:.1%})")
-        
-        print("\n=== 示例完成 ===")
+
+            logging.info(f"处理结果: {result}, 进度: {current}/{total} ({completion:.1%})")
+
+        logging.info("\n=== 示例完成 ===")
 
 
 if __name__ == "__main__":

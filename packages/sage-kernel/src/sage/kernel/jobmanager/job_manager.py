@@ -1,4 +1,5 @@
-from datetime import datetime
+import json
+import logging
 import os
 from pathlib import Path
 from typing import TYPE_CHECKING, Dict, Any, List, Optional
@@ -485,16 +486,17 @@ class JobManager: #Job Manager
         self.session_id = self.session_timestamp.strftime("%Y%m%d_%H%M%S")
         
         # 2. 确定日志基础目录
-        # 方案：项目的.sage/logs/jobmanager 作为实际存储位置
-        # 优先使用环境变量指定的项目根目录，fallback到用户主目录
-        project_root = os.environ.get('SAGE_PROJECT_ROOT')
-        if project_root and Path(project_root).exists():
-            self.log_base_dir = Path(project_root) / ".sage" / "logs" / "jobmanager" / f"session_{self.session_id}"
-        else:
-            # Fallback到用户主目录，但使用更清晰的结构
-            self.log_base_dir = Path.home() / ".sage" / "logs" / "jobmanager" / f"session_{self.session_id}"
-        
-        print(f"JobManager logs: {self.log_base_dir}")
+        # 使用统一的.sage/logs/jobmanager目录
+        from sage.common.config.output_paths import get_sage_paths
+
+        project_root = os.environ.get("SAGE_PROJECT_ROOT")
+        sage_paths = get_sage_paths(project_root)
+
+        self.log_base_dir = (
+            sage_paths.logs_dir / "jobmanager" / f"session_{self.session_id}"
+        )
+
+        self.logger.info(f"JobManager logs: {self.log_base_dir}")
         Path(self.log_base_dir).mkdir(parents=True, exist_ok=True)
 
         
@@ -555,12 +557,12 @@ def main():
     )
     
     if not args.no_daemon:
-        print(f"Starting SAGE JobManager with TCP daemon on {args.host}:{args.port}")
-        print("Press Ctrl+C to stop...")
+        logging.info(f"Starting SAGE JobManager with TCP daemon on {args.host}:{args.port}")
+        logging.info("Press Ctrl+C to stop...")
         jobmanager.run_forever()
     else:
-        print("SAGE JobManager started without TCP daemon")
-        print("Use the JobManager instance directly in your code")
+        logging.info("SAGE JobManager started without TCP daemon")
+        logging.info("Use the JobManager instance directly in your code")
 
 
 if __name__ == "__main__":

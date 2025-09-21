@@ -1,3 +1,7 @@
+from sage.common.utils.logging.custom_logger import CustomLogger
+import logging
+from typing import List, Tuple
+
 import torch
 from typing import List, Tuple
 from transformers import AutoModelForSequenceClassification, AutoTokenizer,AutoModelForCausalLM
@@ -68,8 +72,37 @@ class BGEReranker(MapFunction):
         :return: A Data object containing a tuple (query, reranked_documents_with_scores).
         """
         try:
-            query, doc_set = data  # Unpack the input data
-            top_k = self.config["topk"]  # Get the top-k parameter for reranking
+            # 处理不同的输入格式
+            if isinstance(data, dict):
+                # 来自 ChromaRetriever 的字典格式: {"query": ..., "results": [...]}
+                query = data.get("query", "")
+                doc_set = data.get("results", [])
+                if not query:
+                    self.logger.error("Missing 'query' field in dictionary input")
+                    return {"query": "", "results": []}
+            elif isinstance(data, (tuple, list)) and len(data) == 2:
+                # 传统的元组格式: (query, doc_set)
+                query, doc_set = data
+            else:
+                self.logger.error(
+                    f"Unexpected input format for BGEReranker: {type(data)}"
+                )
+                return {"query": "", "results": []}
+
+            top_k = self.config.get("topk") or self.config.get(
+                "top_k", 3
+            )  # Get the top-k parameter for reranking
+
+            # Handle empty document set case
+            if not doc_set:
+                self.logger.info(
+                    "BGEReranker received empty document set, returning empty results"
+                )
+                # 返回与输入格式一致的输出
+                if isinstance(data, dict):
+                    return {"query": query, "results": []}
+                else:
+                    return query, []
 
             # Generate query-document pairs for scoring
             pairs = [(query, doc) for doc in doc_set]
@@ -101,8 +134,14 @@ class BGEReranker(MapFunction):
             # Sort the documents by relevance score in descending order
             reranked_docs = sorted(scored_docs, key=lambda x: x["relevance_score"], reverse=True)[:top_k]
             reranked_docs_list = [doc["retrieved_docs"] for doc in reranked_docs]
-            self.logger.info(f"\033[32m[ {self.__class__.__name__}]: Rerank Results: {reranked_docs_list }\033[0m ")
-            self.logger.debug(f"Top score: {reranked_docs[0]['relevance_score'] if reranked_docs else 'N/A'}")
+            self.logger.info(
+                f"\033[32m[ {self.__class__.__name__}]: Rerank Results: {reranked_docs_list }\033[0m "
+            )
+            self.logger.debug(
+                f"Top score: {reranked_docs[0]['relevance_score'] if reranked_docs else 'N/A'}"
+            )
+
+            self.logger.info(f"Rerank Results: {reranked_docs_list}")
 
         except Exception as e:
             raise RuntimeError(f"BGEReranker error: {str(e)}")
@@ -293,7 +332,7 @@ class LLMbased_Reranker(MapFunction):
 
 #     # 输出结果
 #     result_query, result_docs = output
-#     print("Query:", result_query)
-#     print("Top-k Re-ranked Documents:")
+#     self.logger.info("Query:", result_query)
+#     self.logger.info("Top-k Re-ranked Documents:")
 #     for i, doc in enumerate(result_docs, 1):
-#         print(f"{i}. {doc}")
+#         self.logger.info(f"{i}. {doc}")

@@ -1,3 +1,9 @@
+from sage.common.utils.logging.custom_logger import CustomLogger
+import json
+import os
+import re
+import time
+from collections import Counter
 from typing import Any, List, Literal, Optional, Union
 from typing import Any, List, Optional
 from urllib.parse import quote
@@ -62,8 +68,10 @@ class Paper:
                 space_split_list = line.split(' ')
                 if 1 < len(space_split_list) < 5:
                     if 1 < len(point_split_list) < 5 and (
-                            point_split_list[0] in self.roman_num or point_split_list[0] in self.digit_num):
-                        # print("line:", line)
+                        point_split_list[0] in self.roman_num
+                        or point_split_list[0] in self.digit_num
+                    ):
+                        # self.logger.info("line:", line)
                         chapter_names.append(line)
 
         return chapter_names
@@ -85,23 +93,32 @@ class Paper:
                             max_font_size = font_size  # 更新最大值
                             max_string = block["lines"][0]["spans"][0]["text"]  # 更新最大值对应的字符串
         max_font_sizes.sort()
-        # print("max_font_sizes", max_font_sizes[-10:])
-        cur_title = ''
+        # self.logger.info("max_font_sizes", max_font_sizes[-10:])
+        cur_title = ""
         for page_index, page in enumerate(doc):  # 遍历每一页
             text = page.get_text("dict")  # 获取页面上的文本信息
             blocks = text["blocks"]  # 获取文本块列表
             for block in blocks:  # 遍历每个文本块
                 if block["type"] == 0 and len(block['lines']):  # 如果是文字类型
                     if len(block["lines"][0]["spans"]):
-                        cur_string = block["lines"][0]["spans"][0]["text"]  # 更新最大值对应的字符串
-                        font_flags = block["lines"][0]["spans"][0]["flags"]  # 获取第一行第一段文字的字体特征
-                        font_size = block["lines"][0]["spans"][0]["size"]  # 获取第一行第一段文字的字体大小
-                        # print(font_size)
-                        if abs(font_size - max_font_sizes[-1]) < 0.3 or abs(font_size - max_font_sizes[-2]) < 0.3:
-                            # print("The string is bold.", max_string, "font_size:", font_size, "font_flags:", font_flags)                            
+                        cur_string = block["lines"][0]["spans"][0][
+                            "text"
+                        ]  # 更新最大值对应的字符串
+                        font_flags = block["lines"][0]["spans"][0][
+                            "flags"
+                        ]  # 获取第一行第一段文字的字体特征
+                        font_size = block["lines"][0]["spans"][0][
+                            "size"
+                        ]  # 获取第一行第一段文字的字体大小
+                        # self.logger.info(font_size)
+                        if (
+                            abs(font_size - max_font_sizes[-1]) < 0.3
+                            or abs(font_size - max_font_sizes[-2]) < 0.3
+                        ):
+                            # self.logger.info("The string is bold.", max_string, "font_size:", font_size, "font_flags:", font_flags)
                             if len(cur_string) > 4 and "arXiv" not in cur_string:
-                                # print("The string is bold.", max_string, "font_size:", font_size, "font_flags:", font_flags) 
-                                if cur_title == '':
+                                # self.logger.info("The string is bold.", max_string, "font_size:", font_size, "font_flags:", font_flags)
+                                if cur_title == "":
                                     cur_title += cur_string
                                 else:
                                     cur_title += ' ' + cur_string
@@ -209,7 +226,7 @@ class ArxivPDFDownloader(MapFunction):
 
         pdf_paths = []
 
-        print(feed)
+        self.logger.info(feed)
         for entry in feed.entries:
             arxiv_id = entry.id.split('/abs/')[-1]
             pdf_url = f"https://arxiv.org/pdf/{arxiv_id}.pdf"
@@ -240,7 +257,7 @@ class ArxivPDFParser(MapFunction):
     def __init__(self, config):
         super().__init__()
         config = config["ArxivPDFParser"]
-        print(config)
+        self.logger.info(config)
         self.output_dir = config.get("output_dir", "arxiv_structured_json")
         os.makedirs(self.output_dir, exist_ok=True)
 

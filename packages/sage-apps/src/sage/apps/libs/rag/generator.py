@@ -1,3 +1,5 @@
+from sage.common.utils.logging.custom_logger import CustomLogger
+import json
 import os
 import yaml
 from typing import Tuple, List, Any
@@ -229,6 +231,8 @@ class HFGenerator(MapFunction):
         prompt = data[1] if len(data) > 1 else data
 
         response = self.model.generate(prompt, **kwargs)
+
+        self.logger.info(f"\033[32m[ {self.__class__.__name__}]: Response: {response}\033[0m ")
 
         # Return the generated response as a Data object
         self.logger.info(f"\033[32m[ {self.__class__.__name__}]: Response: {response}\033[0m ")
