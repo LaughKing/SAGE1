@@ -19,6 +19,17 @@ class ConnectedStreams:
         self._environment = env
         self.transformations = transformations
 
+        # 验证输入
+        if len(transformations) < 2:
+            raise ValueError("ConnectedStreams requires at least 2 transformations")
+
+        # 确保所有transformation都来自同一个环境
+        for trans in transformations:
+            if trans.env != env:
+                raise ValueError(
+                    "All transformations must be from the same environment"
+                )
+
     def _get_transformation_classes(self):
         """动态导入transformation类以避免循环导入"""
         if not hasattr(self, '_transformation_classes'):
@@ -35,13 +46,23 @@ class ConnectedStreams:
             }
         return self._transformation_classes
 
-    # ---------------------------------------------------------------------
-    # general datastream api
-    # ---------------------------------------------------------------------
-    def map(self, function: Union[Type[BaseFunction], callable], *args, **kwargs) -> 'DataStream':
+
+
+    def map(
+        self,
+        function: Union[Type[BaseFunction], callable],
+        *args,
+        parallelism: int = None,
+        **kwargs,
+    ) -> "DataStream":
         if callable(function) and not isinstance(function, type):
-            function = wrap_lambda(function, 'map')
-        
+            function = wrap_lambda(function, "map")
+
+        # 使用传入的parallelism或者默认值1
+        actual_parallelism = (
+            parallelism if parallelism is not None else 1
+        )
+
         # 获取MapTransformation类
         MapTransformation = self._get_transformation_classes()['MapTransformation']
         tr = MapTransformation(self._environment, function, *args, **kwargs)
@@ -49,8 +70,11 @@ class ConnectedStreams:
 
     def sink(self, function: Union[Type[BaseFunction], callable], *args, **kwargs) -> 'DataStream':
         if callable(function) and not isinstance(function, type):
-            function = wrap_lambda(function, 'sink')
-        
+            function = wrap_lambda(function, "sink")
+
+        # 使用传入的parallelism或者默认值1
+        actual_parallelism = parallelism if parallelism is not None else 1
+
         # 获取SinkTransformation类
         SinkTransformation = self._get_transformation_classes()['SinkTransformation']
         tr = SinkTransformation(self._environment, function, *args, **kwargs)
@@ -189,8 +213,14 @@ class ConnectedStreams:
                 )
         
         # Import CoMapTransformation (delayed import to avoid circular dependencies)
-        from sage.core.transformation.comap_transformation import CoMapTransformation
-        
+        from sage.core.transformation.comap_transformation import \
+            CoMapTransformation
+
+        # 使用传入的parallelism或者之前设置的hint
+        actual_parallelism = (
+            parallelism if parallelism is not None else 1
+        )
+
         # Create CoMapTransformation
         tr = CoMapTransformation(self._environment, function, *args, **kwargs)
         
@@ -240,7 +270,13 @@ class ConnectedStreams:
         # self._validate_keyed_streams()
         
         # 创建transformation
-        join_tr = JoinTransformation(self._environment, function, *args, **kwargs)
+        # 使用传入的parallelism或者默认值1
+        actual_parallelism = (
+            parallelism if parallelism is not None else 1
+        )
+        join_tr = JoinTransformation(
+            self._environment, function, *args, parallelism=actual_parallelism, **kwargs
+        )
         return self._apply(join_tr)
 
 

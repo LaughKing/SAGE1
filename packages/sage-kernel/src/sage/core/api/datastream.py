@@ -53,40 +53,87 @@ class DataStream(Generic[T]):
             }
         return self._transformation_classes
 
-    # ---------------------------------------------------------------------
-    # general datastream api
-    # ---------------------------------------------------------------------
-    def map(self, function: Union[Type[BaseFunction], callable], *args, **kwargs) -> "DataStream":
+
+
+    def map(
+        self,
+        function: Union[Type[BaseFunction], callable],
+        *args,
+        parallelism: int = None,
+        **kwargs,
+    ) -> "DataStream":
         if callable(function) and not isinstance(function, type):
-            function = wrap_lambda(function, 'map')
-        
+            function = wrap_lambda(function, "map")
+
+        # 使用传入的parallelism或者默认值1
+        actual_parallelism = parallelism if parallelism is not None else 1
+
         # 获取MapTransformation类
         MapTransformation = self._get_transformation_classes()['MapTransformation']
         tr = MapTransformation(self._environment, function, *args, **kwargs)
         return self._apply(tr)
 
-    def filter(self, function: Union[Type[BaseFunction], callable], *args, **kwargs) -> "DataStream":
+        # 重置parallelism hint为默认值
+        result = self._apply(tr)
+        return result
+
+    def filter(
+        self,
+        function: Union[Type[BaseFunction], callable],
+        *args,
+        parallelism: int = None,
+        **kwargs,
+    ) -> "DataStream":
         if callable(function) and not isinstance(function, type):
-            function = wrap_lambda(function, 'filter')
-        
+            function = wrap_lambda(function, "filter")
+
+        # 使用传入的parallelism或者默认值1
+        actual_parallelism = parallelism if parallelism is not None else 1
+
         # 获取FilterTransformation类
         FilterTransformation = self._get_transformation_classes()['FilterTransformation']
         tr = FilterTransformation(self._environment, function, *args, **kwargs)
         return self._apply(tr)
 
-    def flatmap(self, function: Union[Type[BaseFunction], callable], *args, **kwargs) -> "DataStream":
+        # 重置parallelism hint为默认值
+        result = self._apply(tr)
+        return result
+
+    def flatmap(
+        self,
+        function: Union[Type[BaseFunction], callable],
+        *args,
+        parallelism: int = None,
+        **kwargs,
+    ) -> "DataStream":
         if callable(function) and not isinstance(function, type):
-            function = wrap_lambda(function, 'flatmap')
-        
+            function = wrap_lambda(function, "flatmap")
+
+        # 使用传入的parallelism或者默认值1
+        actual_parallelism = parallelism if parallelism is not None else 1
+
         # 获取FlatMapTransformation类
         FlatMapTransformation = self._get_transformation_classes()['FlatMapTransformation']
         tr = FlatMapTransformation(self._environment, function, *args, **kwargs)
         return self._apply(tr)
 
-    def sink(self, function: Union[Type[BaseFunction], callable], *args, **kwargs) -> "DataStream":
+        # 重置parallelism hint为默认值
+        result = self._apply(tr)
+        return result
+
+    def sink(
+        self,
+        function: Union[Type[BaseFunction], callable],
+        *args,
+        parallelism: int = None,
+        **kwargs,
+    ) -> "DataStream":
         if callable(function) and not isinstance(function, type):
-            function = wrap_lambda(function, 'sink')
-        
+            function = wrap_lambda(function, "sink")
+
+        # 使用传入的parallelism或者默认值1
+        actual_parallelism = parallelism if parallelism is not None else 1
+
         # 获取SinkTransformation类
         SinkTransformation = self._get_transformation_classes()['SinkTransformation']
         tr = SinkTransformation(self._environment, function, *args, **kwargs)
@@ -96,7 +143,12 @@ class DataStream(Generic[T]):
     def keyby(self, function: Union[Type[BaseFunction], callable],
               strategy: str = "hash", *args, **kwargs) -> "DataStream":
         if callable(function) and not isinstance(function, type):
-            function = wrap_lambda(function, 'keyby')
+            function = wrap_lambda(function, "keyby")
+
+        # 使用传入的parallelism或者默认值1
+        actual_parallelism = (
+            parallelism if parallelism is not None else 1
+        )
 
         # 获取KeyByTransformation类
         KeyByTransformation = self._get_transformation_classes()['KeyByTransformation']
@@ -108,7 +160,13 @@ class DataStream(Generic[T]):
         )
         return self._apply(tr)
 
-    def connect(self, other: Union["DataStream", "ConnectedStreams"]) -> 'ConnectedStreams':
+        # 重置parallelism hint为默认值
+        result = self._apply(tr)
+        return result
+
+    def connect(
+        self, other: Union["DataStream", "ConnectedStreams"]
+    ) -> "ConnectedStreams":
         """连接两个数据流，返回ConnectedStreams
         
         Args:
